@@ -1,0 +1,24 @@
+{
+  "name": "ineedthis",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gpittarelli/ineedthis.git"
+  },
+  "keywords": [
+    "service",
+    "component",
+    "module",
+    "state",
+    "dependency"
+  ],
+  "author": "George Pittarelli",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gpittarelli/ineedthis/issues"
+  },
+  "homepage": "https://github.com/gpittarelli/ineedthis#readme"
+}
