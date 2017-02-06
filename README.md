@@ -26,7 +26,7 @@ the flexibility to support any custom semantics.
     include the fully qualified package name, mimicing require/import
     paths.
 
-**Status: Purely conceptual**
+**Status: Pre-Alpha; PoC implementation**
 
 TODO:
   - decide which of the many "extra" features of component/mount we
