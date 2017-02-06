@@ -147,7 +147,7 @@ type System = {[ServiceName]: any}
 `createService<T, StartFn: (...any) => (System) => Promise<T>>(
   ServiceName: String, {
     dependencies?: [ServiceName | AliasedServiceName],
-    start?: StartFn,
+    start: StartFn,
     stop?: T => Promise<()>
   }
 ): StartFn`
@@ -158,8 +158,8 @@ ServiceName.
     this service gets started; a map of them being passed to the
     second call of `start`. `AliasedServiceName`s allow asking for
     multiple services of a specific type (TODO: example).
-  - `start` initializes the server; curried so as to be called in two
-    steps:
+  - `start` must be specified to initialize the server; curried so as
+    to be called in two steps:
     1. Arbitrary initialization step: called internally or explicitly
        by the user to configure an instance of this service
     2. Actual start/linking step: the initialized dependencies are
