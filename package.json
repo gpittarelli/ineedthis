@@ -1,7 +1,7 @@
 {
   "name": "ineedthis",
   "version": "0.0.0",
-  "description": "",
+  "description": "Stateful dependency management",
   "main": "index.js",
   "scripts": {},
   "repository": {
@@ -15,6 +15,9 @@
     "state",
     "dependency"
   ],
+  "engines": {
+    "node": ">=4.0.0"
+  },
   "author": "George Pittarelli",
   "license": "MIT",
   "bugs": {
