@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "description": "Stateful dependency management",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "build": "tsc",
+    "prepublish": "npm run build"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gpittarelli/ineedthis.git"
@@ -23,5 +26,9 @@
   "bugs": {
     "url": "https://github.com/gpittarelli/ineedthis/issues"
   },
-  "homepage": "https://github.com/gpittarelli/ineedthis#readme"
+  "homepage": "https://github.com/gpittarelli/ineedthis#readme",
+  "devDependencies": {
+    "@types/node": "7.0.5",
+    "typescript": "2.1.5"
+  }
 }
