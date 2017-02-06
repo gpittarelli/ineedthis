@@ -76,7 +76,10 @@ var C = createService(
 
 var App = createService(
   'package/AppServer', {
-    dependencies:
+    dependencies: [
+      'package/Configuration',
+      'package/OverlayService'
+    ],
     start: () => ({
       'package/Configuration': config,
       'package/OverlayService': overlay
