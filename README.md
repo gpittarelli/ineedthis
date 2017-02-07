@@ -1,5 +1,5 @@
 # ineedthis
-(better name TBD)
+[![npm version](https://badge.fury.io/js/ineedthis.svg)](https://badge.fury.io/js/ineedthis)
 
 Implements an opinionated, simple management layer for stateful
 dependencies, directly akin to
