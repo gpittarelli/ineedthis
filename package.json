@@ -2,15 +2,14 @@
   "name": "ineedthis",
   "version": "0.0.0",
   "description": "Stateful dependency management",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "./lib.es6/index.js",
+  "types": "./lib.es6/index.d.ts",
   "scripts": {
     "build": "tsc",
     "prepublish": "npm run build"
   },
   "files": [
-    "index.js",
-    "index.d.ts"
+    "lib.es6"
   ],
   "repository": {
     "type": "git",
