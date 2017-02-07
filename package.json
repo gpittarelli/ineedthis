@@ -1,6 +1,6 @@
 {
   "name": "ineedthis",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Stateful dependency management",
   "main": "./lib.es6/index.js",
   "types": "./lib.es6/index.d.ts",
@@ -38,6 +38,8 @@
     "typescript": "2.1.5"
   },
   "babel": {
-    "presets": ["es2015"]
+    "presets": [
+      "es2015"
+    ]
   }
 }
