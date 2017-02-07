@@ -20,6 +20,12 @@ type ServiceRegistry = {[service in ServiceName]: Service<any>};
 
 const registry: ServiceRegistry = {};
 
+export function dangerouslyResetRegistry() {
+  for (const serviceName of Object.keys(registry)) {
+    delete registry[serviceName];
+  }
+}
+
 export function createService<T, StartFn extends StartFnT<T>>(
   name: ServiceName,
   description: ServiceDescription<T, StartFn>
