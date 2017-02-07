@@ -1,16 +1,16 @@
-type ServiceName = string;
-type AliasedServiceName = {type: string, as: string};
-type Service<T> = {
+export type ServiceName = string;
+export type AliasedServiceName = {type: string, as: string};
+export type Service<T> = {
   (...args: any[]): (partialSystem: System) => Promise<T>,
   // Don't conflict with Function.prototype.name
   serviceName: ServiceName,
   dependencies: ServiceName[],
   [extraProps: string]: any
 };
-type System = {[key in ServiceName]: any};
+export type System = {[key in ServiceName]: any};
 
-type StartFnT<T> = ((...args: any[]) => (partialSystem: System) => Promise<T>);
-interface ServiceDescription<T, StartFn extends StartFnT<T>> {
+export type StartFnT<T> = ((...args: any[]) => (partialSystem: System) => Promise<T>);
+export interface ServiceDescription<T, StartFn extends StartFnT<T>> {
   dependencies?: (ServiceName | AliasedServiceName)[];
   start: StartFn;
   stop?: ((instance: T) => void);

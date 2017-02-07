@@ -5,6 +5,7 @@
     "alwaysStrict": true,
     "noUnusedLocals": true,
     "suppressExcessPropertyErrors": true,
+    "declaration": true,
     "lib": ["es2015", "es2016", "es2017"],
     "target": "es6",
     "module": "CommonJS",
