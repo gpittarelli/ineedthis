@@ -5,12 +5,14 @@
   "main": "./lib.es6/index.js",
   "types": "./lib.es6/index.d.ts",
   "scripts": {
-    "build": "tsc && babel lib.es6/ --out-dir lib/",
-    "build:watch": "concurrently 'tsc -w' 'babel -w lib.es6/ --out-dir lib/'",
+    "build:babel": "babel --source-maps=inline lib.es6/ --out-dir lib/",
+    "build": "npm run clean && tsc && npm run build:babel",
+    "build:watch": "concurrently 'tsc -w' 'npm run build:babel -- -w'",
     "test": "npm run build && npm run test:nobuild",
-    "test:nobuild": "mocha",
+    "test:nobuild": "mocha $MOCHA_OPTS",
     "test:watch": "nodemon --watch lib --watch test -x 'npm -s run test:nobuild'",
-    "dev": "concurrently 'npm run build:watch' 'npm run test:watch'",
+    "dev": "concurrently --prefix '[{name}]' --names 'TS,Babel,Mocha' 'tsc -w' 'npm run build:babel -- -w' 'npm run test:watch'",
+    "clean": "rimraf lib lib.es6",
     "prepublish": "npm run build"
   },
   "files": [
@@ -46,6 +48,8 @@
     "concurrently": "3.1.0",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
+    "rimraf": "2.5.4",
+    "source-map-support": "0.4.11",
     "typescript": "2.1.5"
   },
   "babel": {
@@ -54,9 +58,7 @@
     ],
     "plugins": [
       "transform-runtime"
-    ],
-    "sourceMaps": "inline",
-    "sourceFileName": "src/index.ts"
+    ]
   },
   "dependencies": {
     "babel-runtime": "^6.22.0"
