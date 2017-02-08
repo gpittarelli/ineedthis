@@ -54,7 +54,9 @@
     ],
     "plugins": [
       "transform-runtime"
-    ]
+    ],
+    "sourceMaps": "inline",
+    "sourceFileName": "src/index.ts"
   },
   "dependencies": {
     "babel-runtime": "^6.22.0"
