@@ -10,6 +10,7 @@
     "test": "npm run build && npm run test:nobuild",
     "test:nobuild": "mocha",
     "test:watch": "nodemon --watch lib --watch test -x 'npm -s run test:nobuild'",
+    "dev": "concurrently 'npm run build:watch' 'npm run test:watch'",
     "prepublish": "npm run build"
   },
   "files": [
