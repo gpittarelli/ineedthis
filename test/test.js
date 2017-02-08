@@ -11,7 +11,7 @@ function delay(d, x) {
 describe('ineedthis', () => {
   beforeEach(dangerouslyResetRegistry);
 
-  it('loads in order; doesn\'t load unnecessary deps', () => {
+  it('starts in order; doesn\'t load unnecessary deps', () => {
     var A = createService('A', {start: () => () => 0}),
       B = createService('B', {dependencies: ['A'], start: () => () => 1}),
       C = createService('C', {dependencies: ['B'], start: () => () => 2}),
@@ -22,6 +22,20 @@ describe('ineedthis', () => {
       expect(sys).to.deep.equal({
         A: 0,
         B: 1,
+        C: 2
+      });
+    });
+  });
+
+  it('start with overriden dependencies', () => {
+    var A = createService('A', {start: () => () => 0}),
+      B = createService('B', {dependencies: ['A'], start: () => () => 1}),
+      C = createService('C', {dependencies: ['B'], start: () => () => 2}),
+      D = createService('D', {start: () => () => 3});
+
+    return start(C, {B: D}).then(sys => {
+      expect(sys).to.deep.equal({
+        B: 3,
         C: 2
       });
     });

@@ -16,11 +16,13 @@ export type ServiceInstance<T, StartFn extends StartFnT<T>> = {
   // Don't conflict with Function.prototype.name
   serviceName: ServiceName,
   dependencies: ServiceName[],
-  start: StartFn;
+  start: (partialSystem: System) => Promise<T>;
   stop: ((instance: T) => void);
   [extraProps: string]: any
 };
-export type System = {[key in ServiceName]: ServiceInstance<any, any>};
+
+export type System = {[key in ServiceName]: any};
+export type SystemMap = {[key in ServiceName]: ServiceInstance<any, any>};
 
 export interface ServiceDescription<T, StartFn extends StartFnT<T>> {
   dependencies?: (ServiceName | AliasedServiceName)[];
@@ -38,6 +40,10 @@ export function dangerouslyResetRegistry() {
   }
 }
 
+function cloneFn<T>(fn: ((...args: any[]) => T)): ((...args: any[]) => T) {
+  return (...args: any[]) => fn(...args);
+}
+
 export function createService<T, StartFn extends StartFnT<T>>(
   name: ServiceName,
   description: ServiceDescription<T, StartFn>
@@ -51,64 +57,66 @@ export function createService<T, StartFn extends StartFnT<T>>(
     defaultedDescription.stop = () => undefined;
   }
 
-  const service = Object.assign(
-    defaultedDescription.start.bind(null), {
+  const start: StartFn = (cloneFn(defaultedDescription.start) as any),
+    service: Service<T, StartFn> = (Object.assign(start, {
       serviceName: name,
-      stop: defaultedDescription.stop,
-      dependencies: defaultedDescription.dependencies
-    }
-  );
+      dependencies: defaultedDescription.dependencies,
+      start,
+      stop: defaultedDescription.stop
+    }) as any);
 
   registry[name] = service;
   return service;
 }
 
-function flatten<T>(ll: T[][]): T[] {
-  return ([] as T[]).concat(...ll);
+function flatten<T>(ll: Iterable<T>[]): T[] {
+  return ([] as T[]).concat(...ll.map(it => Array.from(it)));
 }
 
-function uniq<T>(xs: T[]): T[] {
-  return Array.from(new Set(xs));
-}
-
-// TODO: Can type without 'any' once Variadic Kinds lands (TS issue #5453)
-export async function start(services: (Service<any, any> | Service<any, any>[])): Promise<System> {
+// TODO: Can get rid of 'any' once Variadic Kinds lands (TS issue #5453)
+export async function start(
+  services: (Service<any, any> | Service<any, any>[]),
+  overrides: System = {}
+): Promise<System> {
   if (!Array.isArray(services)) {
     services = [services];
   }
 
+  for (const s of services) {
+    if (overrides[s.serviceName]) {
+      throw new Error('Supplied ');
+    }
+
+    overrides[s.serviceName] = s;
+  }
+
+  function resolve(serviceName: ServiceName): Service<any, any> {
+    if (overrides && overrides[serviceName]) {
+      return overrides[serviceName];
+    } else {
+      return registry[serviceName];
+    }
+  }
+
+  // Resolve all required dependencies, building of a map of
+  // serviceNames -> still required dependencies
+  const outstandingDeps: {[s in ServiceName]: Set<ServiceName>} = {};
+  let toProcess = new Set(services.map(s => s.serviceName));
+  do {
+    for (const s of toProcess) {
+      outstandingDeps[s] = new Set(resolve(s).dependencies);
+    }
+
+    toProcess = new Set(flatten(Object.values(outstandingDeps)));
+    Object.keys(outstandingDeps).forEach(k => toProcess.delete(k));
+  } while (toProcess.size > 0);
+
   // Final output system we'll build up
   const system: {[key in ServiceName]: any} = {};
 
-  // Map of the remaining dependencies to fulfill, keyed by dependent
-  const outstandingDeps: {[s in ServiceName]: Set<ServiceName>} = {};
-  for (const s of services) {
-    outstandingDeps[s.serviceName] = new Set(s.dependencies);
-  }
-
-  // Resolve all required dependencies:
-  let toProcess = new Set();
-  function updateToProcess() {
-    toProcess = new Set(
-      flatten(Object.keys(outstandingDeps).map(s => registry[s].dependencies))
-    );
-    Object.keys(outstandingDeps).forEach(k => toProcess.delete(k));
-  }
-
-  updateToProcess();
-  while (toProcess.size > 0) {
-    toProcess.forEach(s => {
-      outstandingDeps[s] = new Set(registry[s].dependencies);
-    });
-
-    updateToProcess();
-  }
-
-  // Initialize all dependencies
   const outstandingLoads: {[name in ServiceName]: Promise<Service<any, any>>} = {};
-
   async function load(name: ServiceName): Promise<Service<any, any>> {
-    const service = await registry[name]()(system);
+    const service = await resolve(name)()(system);
 
     delete outstandingLoads[name];
     Object.values(outstandingDeps).forEach(deps => deps.delete(name));
