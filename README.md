@@ -173,6 +173,15 @@ ServiceName.
 Starts the specified service(s), resolving all their
 dependencies. Returns a system--a map of all the initialized services.a
 
+## Development
+
+`npm run test/clean/build` work as expected.
+
+`npm run dev` gets a full stack of builds watching + test cases
+running on change.
+
+To filter tests, run with `MOCHA_OPTS` set to, eg, `'-g somepattern'`.
+
 ## License
 
 Released under the MIT License. See the LICENSE file for full text
