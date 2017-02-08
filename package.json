@@ -2,7 +2,7 @@
   "name": "ineedthis",
   "version": "0.0.2",
   "description": "Stateful dependency management",
-  "main": "./lib.es6/index.js",
+  "main": "./lib/index.js",
   "types": "./lib.es6/index.d.ts",
   "scripts": {
     "build:babel": "babel --source-maps=inline lib.es6/ --out-dir lib/",
