@@ -1,22 +1,34 @@
+export type StartFnT<T> = ((...args: any[]) => (partialSystem: System) => Promise<T>);
+
 export type ServiceName = string;
 export type AliasedServiceName = {type: string, as: string};
-export type Service<T> = {
+export type Service<T, StartFn extends StartFnT<T>> = {
   (...args: any[]): (partialSystem: System) => Promise<T>,
   // Don't conflict with Function.prototype.name
   serviceName: ServiceName,
   dependencies: ServiceName[],
+  start: StartFn;
+  stop: ((instance: T) => void);
   [extraProps: string]: any
 };
-export type System = {[key in ServiceName]: any};
+export type ServiceInstance<T, StartFn extends StartFnT<T>> = {
+  (...args: any[]): (partialSystem: System) => Promise<T>,
+  // Don't conflict with Function.prototype.name
+  serviceName: ServiceName,
+  dependencies: ServiceName[],
+  start: StartFn;
+  stop: ((instance: T) => void);
+  [extraProps: string]: any
+};
+export type System = {[key in ServiceName]: ServiceInstance<any, any>};
 
-export type StartFnT<T> = ((...args: any[]) => (partialSystem: System) => Promise<T>);
 export interface ServiceDescription<T, StartFn extends StartFnT<T>> {
   dependencies?: (ServiceName | AliasedServiceName)[];
   start: StartFn;
   stop?: ((instance: T) => void);
 };
 
-type ServiceRegistry = {[service in ServiceName]: Service<any>};
+type ServiceRegistry = {[service in ServiceName]: Service<any, any>};
 
 const registry: ServiceRegistry = {};
 
@@ -29,7 +41,7 @@ export function dangerouslyResetRegistry() {
 export function createService<T, StartFn extends StartFnT<T>>(
   name: ServiceName,
   description: ServiceDescription<T, StartFn>
-): Service<T> {
+): Service<T, StartFn> {
   const defaultedDescription = {...description};
   if (!Array.isArray(defaultedDescription.dependencies)) {
     defaultedDescription.dependencies = [];
@@ -55,14 +67,18 @@ function flatten<T>(ll: T[][]): T[] {
   return ([] as T[]).concat(...ll);
 }
 
-// TODO: Can type without any once Variadic Kinds lands (TS issue #5453)
-export async function start(services: (Service<any> | Service<any>[])) {
+function uniq<T>(xs: T[]): T[] {
+  return Array.from(new Set(xs));
+}
+
+// TODO: Can type without 'any' once Variadic Kinds lands (TS issue #5453)
+export async function start(services: (Service<any, any> | Service<any, any>[])): Promise<System> {
   if (!Array.isArray(services)) {
     services = [services];
   }
 
   // Final output system we'll build up
-  const system: System = {};
+  const system: {[key in ServiceName]: any} = {};
 
   // Map of the remaining dependencies to fulfill, keyed by dependent
   const outstandingDeps: {[s in ServiceName]: Set<ServiceName>} = {};
@@ -89,9 +105,9 @@ export async function start(services: (Service<any> | Service<any>[])) {
   }
 
   // Initialize all dependencies
-  const outstandingLoads: {[name in ServiceName]: Promise<Service<any>>} = {};
+  const outstandingLoads: {[name in ServiceName]: Promise<Service<any, any>>} = {};
 
-  async function load(name: ServiceName): Promise<Service<any>> {
+  async function load(name: ServiceName): Promise<Service<any, any>> {
     const service = await registry[name]()(system);
 
     delete outstandingLoads[name];
@@ -120,4 +136,37 @@ export async function start(services: (Service<any> | Service<any>[])) {
   }
 
   return system;
+}
+
+export async function stop(system: System): Promise<void> {
+  const countDependents: {[s in ServiceName]: number} = {};
+  for (const s of Object.keys(system)) {
+    countDependents[s] = 0;
+  }
+
+  for (const s of Object.keys(system)) {
+    for (const d of registry[s].dependencies) {
+      countDependents[d]++;
+    }
+  }
+
+  const outstandingShutdowns: {[s in ServiceName]: Promise<void>} = {},
+    finishedShutdowns: {[s in ServiceName]: boolean} = {};
+  do {
+    for (const [s, remainingDependents] of Object.entries(countDependents)) {
+      if (remainingDependents === 0 && !outstandingShutdowns[s] && !finishedShutdowns[s]) {
+        outstandingShutdowns[s] = (async function () {
+          const service = registry[s];
+          await service.stop(service);
+          finishedShutdowns[s] = true;
+          delete outstandingShutdowns[s];
+          for (const d of service.dependencies) {
+            countDependents[d]--;
+          }
+        })();
+      }
+    }
+
+    await Promise.race(Object.values(outstandingShutdowns));
+  } while (Object.keys(finishedShutdowns).length < Object.keys(system).length);
 }

@@ -1,7 +1,8 @@
 var ineedthis = require('../lib'),
   dangerouslyResetRegistry = ineedthis.dangerouslyResetRegistry,
   createService = ineedthis.createService,
-  start = ineedthis.start;
+  start = ineedthis.start,
+  stop = ineedthis.stop;
 
 function delay(d, x) {
   return new Promise((resolve, reject) => setTimeout(() => resolve(x), d));
@@ -49,6 +50,36 @@ describe('ineedthis', () => {
       B = createService('B', {dependencies: ['A'], start: () => () => 1});
 
     return expect(start(B)).to.eventually.be.rejectedWith(Error, 'Cycle detected');
-  })
+  });
 
+  it('stops', () => {
+    var log = [],
+      A = createService('A', {
+        start: () => () => (log.push('start A'), 0),
+        stop: () => log.push('stop A')
+      }),
+      B = createService('B', {
+        dependencies: ['A'],
+        start: () => () => (log.push('start B'), 1),
+        stop: () => log.push('stop B')
+      }),
+      C = createService('C', {
+        dependencies: ['B'],
+        start: () => () => (log.push('start C'), 2),
+        stop: () => log.push('stop C')
+      });
+
+    return start(C)
+      .then(system => stop(system))
+      .then(() => {
+        expect(log).to.deep.equal([
+          'start A',
+          'start B',
+          'start C',
+          'stop C',
+          'stop B',
+          'stop A'
+        ]);
+      });
+  });
 });
