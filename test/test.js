@@ -27,6 +27,22 @@ describe('ineedthis', () => {
     });
   });
 
+  it('starts in order without global registry; doesn\'t load unnecessary deps', () => {
+    var A = createService('A', {start: () => () => 0}),
+      B = createService('B', {dependencies: [A], start: () => () => 1}),
+      C = createService('C', {dependencies: [B], start: () => () => 2}),
+      // unused:
+      D = createService('D', {dependencies: [C], start: () => () => 3});
+
+    return start(C).then(sys => {
+      expect(sys).to.deep.equal({
+        A: 0,
+        B: 1,
+        C: 2
+      });
+    });
+  });
+
   it('start with overriden dependencies', () => {
     var A = createService('A', {start: () => () => 0}),
       B = createService('B', {dependencies: ['A'], start: () => () => 1}),

@@ -25,7 +25,7 @@ export type System = {[key in ServiceName]: any};
 export type SystemMap = {[key in ServiceName]: ServiceInstance<any, any>};
 
 export interface ServiceDescription<T, StartFn extends StartFnT<T>> {
-  dependencies?: (ServiceName | AliasedServiceName)[];
+  dependencies?: (ServiceName | AliasedServiceName | Service<any, any>)[];
   start: StartFn;
   stop?: ((instance: T) => void);
 };
@@ -33,6 +33,13 @@ export interface ServiceDescription<T, StartFn extends StartFnT<T>> {
 type ServiceRegistry = {[service in ServiceName]: Service<any, any>};
 
 const registry: ServiceRegistry = {};
+
+function dependencyOrService(input: string | ServiceName | Service<any, any>) {
+  if (typeof input === 'string') {
+    return input;
+  }
+  return input.serviceName;
+}
 
 export function dangerouslyResetRegistry() {
   for (const serviceName of Object.keys(registry)) {
@@ -104,7 +111,7 @@ export async function start(
   let toProcess = new Set(services.map(s => s.serviceName));
   do {
     for (const s of toProcess) {
-      outstandingDeps[s] = new Set(resolve(s).dependencies);
+      outstandingDeps[s] = new Set(resolve(s).dependencies.map(dependencyOrService));
     }
 
     toProcess = new Set(flatten(Object.values(outstandingDeps)));
@@ -153,7 +160,7 @@ export async function stop(system: System): Promise<void> {
   }
 
   for (const s of Object.keys(system)) {
-    for (const d of registry[s].dependencies) {
+    for (const d of registry[s].dependencies.map(dependencyOrService)) {
       countDependents[d]++;
     }
   }
@@ -168,7 +175,7 @@ export async function stop(system: System): Promise<void> {
           await service.stop(service);
           finishedShutdowns[s] = true;
           delete outstandingShutdowns[s];
-          for (const d of service.dependencies) {
+          for (const d of service.dependencies.map(dependencyOrService)) {
             countDependents[d]--;
           }
         })();
