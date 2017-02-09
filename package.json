@@ -16,7 +16,8 @@
     "prepublish": "npm run build"
   },
   "files": [
-    "lib.es6"
+    "lib",
+    "lib.es6/index.d.ts"
   ],
   "repository": {
     "type": "git",
