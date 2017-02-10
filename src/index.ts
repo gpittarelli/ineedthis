@@ -80,28 +80,86 @@ function flatten<T>(ll: Iterable<T>[]): T[] {
   return ([] as T[]).concat(...ll.map(it => Array.from(it)));
 }
 
-// TODO: Can get rid of 'any' once Variadic Kinds lands (TS issue #5453)
-export async function start(
-  services: (Service<any, any> | Service<any, any>[]),
-  overrides: System = {}
-): Promise<System> {
-  if (!Array.isArray(services)) {
-    services = [services];
+function getPath(o: any, ks: (string | number)[] = []): any {
+  if (ks.length === 0) {
+    return o;
+  } else {
+    return getPath(o[ks[0]], ks.slice(1));
+  }
+}
+
+export type PackageSpec = {path?: string[], package: string};
+
+/**
+ * Creates a service that, when used, is loaded from the given node
+ * packageName (eg @scope/some-cool-package/path/inside/package) and a
+ * lodash get-style path (eg "abc.0.hi" to get "x" from {abc:[{hi:"x"}]}).
+ */
+export function fromPackage(packageName: string, path?: string[]): PackageSpec {
+  return {path, package: packageName};
+}
+
+function parsePackage(s: string): PackageSpec {
+  const parts = s.split('.');
+  return {path: parts.slice(1), package: parts[0]};
+}
+
+const notFound = Symbol('Package not found');
+function tryRequire(p: string | PackageSpec): any {
+  if (typeof p === "string") {
+    p = parsePackage(p);
   }
 
-  for (const s of services) {
-    if (overrides[s.serviceName]) {
-      throw new Error('Supplied ');
-    }
+  try {
+    const service = getPath(require(p.package), (p.path || []));
+    return service;
+  } catch (e) {
+    console.log(e);
+    return notFound;
+  }
+}
 
-    overrides[s.serviceName] = s;
+function requireOrThrow(p: string | PackageSpec): any {
+  const required = tryRequire(p);
+  if (required === notFound) {
+    throw new Error(`Couldn't resolve dependency: "${p}"`);
+  } else {
+    return required;
+  }
+}
+
+// TODO: Can get rid of 'any' once Variadic Kinds lands (TS issue #5453)
+export async function start(
+  namesOrServices: (ServiceName | PackageSpec | Service<any, any> | (PackageSpec | Service<any, any> | ServiceName)[]),
+  overrides: System = {}
+): Promise<System> {
+  if (!Array.isArray(namesOrServices)) {
+    namesOrServices = [namesOrServices];
   }
 
   function resolve(serviceName: ServiceName): Service<any, any> {
     if (overrides && overrides[serviceName]) {
       return overrides[serviceName];
-    } else {
+    } else if (registry[serviceName]) {
       return registry[serviceName];
+    } else {
+      return requireOrThrow(serviceName);
+    }
+  }
+
+  const services = namesOrServices.map(nameOrService => {
+    if (typeof nameOrService === 'string') {
+      return registry[nameOrService];
+    } else if (nameOrService.hasOwnProperty('package')) {
+      return requireOrThrow(nameOrService as PackageSpec);
+    } else {
+      return nameOrService;
+    }
+  });
+
+  for (const s of services) {
+    if (!overrides[s.serviceName]) {
+      overrides[s.serviceName] = s;
     }
   }
 

@@ -1,8 +1,12 @@
-var ineedthis = require('../lib'),
+var path = require('path'),
+  fs = require('fs'),
+  module = require('module'),
+  ineedthis = require('../lib'),
   dangerouslyResetRegistry = ineedthis.dangerouslyResetRegistry,
   createService = ineedthis.createService,
   start = ineedthis.start,
-  stop = ineedthis.stop;
+  stop = ineedthis.stop,
+  fromPackage = ineedthis.fromPackage;
 
 function delay(d, x) {
   return new Promise((resolve, reject) => setTimeout(() => resolve(x), d));
@@ -23,6 +27,74 @@ describe('ineedthis', () => {
         A: 0,
         B: 1,
         C: 2
+      });
+    });
+  });
+
+  it('basic functionality works with main service specified as a string', () => {
+    var A = createService('A', {start: () => () => 0}),
+      B = createService('B', {dependencies: ['A'], start: () => () => 1}),
+      C = createService('C', {dependencies: ['B'], start: () => () => 2}),
+      // unused:
+      D = createService('D', {dependencies: ['C'], start: () => () => 3});
+
+    return start('C').then(sys => {
+      expect(sys).to.deep.equal({
+        A: 0,
+        B: 1,
+        C: 2
+      });
+    });
+  });
+
+  it('piece together from only overrides', () => {
+    var A = createService('A', {start: () => () => 0}),
+      B = createService('B', {dependencies: ['A'], start: () => () => 1}),
+      C = createService('C', {dependencies: ['B'], start: () => () => 2}),
+      // unused:
+      D = createService('D', {dependencies: ['C'], start: () => () => 3});
+
+    return start('C', {
+      A: createService('somethingelseA', {start: () => () => 0}),
+      B: createService('somethingelseB', {dependencies: ['A'], start: () => () => 1}),
+      C: createService('somethingelseC', {dependencies: ['B'], start: () => () => 2}),
+      // unused:
+      D: createService('somethingelseD', {dependencies: ['C'], start: () => () => 3})
+    }).then(sys => {
+      expect(sys).to.deep.equal({
+        A: 0,
+        B: 1,
+        C: 2
+      });
+    });
+  });
+
+  describe('Package loading', () => {
+    const fakeDir = path.join(__dirname, '..', 'node_modules', 'testPackageName'),
+      fakeFile = path.join(fakeDir, 'index.js');
+
+    before(() => {
+      fs.mkdirSync(fakeDir);
+      fs.writeFileSync(fakeFile, `
+var ineedthis = require('../../lib/index.js');
+module.exports = ineedthis.createService('A', {start: () => () => 0});
+`);
+    });
+
+    after(() => {
+      fs.unlinkSync(fakeFile);
+      fs.rmdirSync(fakeDir);
+    });
+
+    it('packge name', () => {
+      return start({package: 'testPackageName'}).then(sys => {
+        expect(sys).to.deep.equal({A: 0});
+      });
+    });
+
+    it('absolute path', () => {
+      return start(fromPackage(__dirname + '/fixtures/A')).then(sys => {
+        expect(sys).to.deep.equal({A: 0});
       });
     });
   });
