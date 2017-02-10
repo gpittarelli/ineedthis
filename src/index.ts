@@ -1,3 +1,5 @@
+import {name, version} from '../package';
+
 export type StartFnT<T> = ((...args: any[]) => (partialSystem: System) => Promise<T>);
 
 export type ServiceName = string;
@@ -32,7 +34,14 @@ export interface ServiceDescription<T, StartFn extends StartFnT<T>> {
 
 type ServiceRegistry = {[service in ServiceName]: Service<any, any>};
 
-const registry: ServiceRegistry = {};
+// Persist registry across multiple instances of this module. Terrible
+// hack, but needed to support a truly 'global' registry in
+// environments such as lerna  or old npm verisons
+const registrySym = Symbol.for(`Global registry for ${name}@${version}`);
+if (!(global as any)[registrySym]) {
+  (global as any)[registrySym] = {};
+}
+const registry: ServiceRegistry = (global as any)[registrySym];
 
 function dependencyOrService(input: string | ServiceName | Service<any, any>) {
   if (typeof input === 'string') {
