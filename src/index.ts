@@ -1,4 +1,4 @@
-import {name, version} from '../package';
+const {name, version}: {name: string, version: string} = require('../package');
 
 export type StartFnT<T> = ((...args: any[]) => (partialSystem: System) => Promise<T>);
 
