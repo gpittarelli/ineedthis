@@ -1,6 +1,6 @@
 {
   "name": "ineedthis",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Stateful dependency management",
   "main": "./lib/index.js",
   "types": "./lib.es6/index.d.ts",
