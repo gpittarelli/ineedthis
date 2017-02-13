@@ -43,11 +43,13 @@ if (!(global as any)[registrySym]) {
 }
 const registry: ServiceRegistry = (global as any)[registrySym];
 
-function dependencyOrService(input: string | ServiceName | Service<any, any>) {
+function dependencyOrService(input: string | PackageSpec | ServiceName | Service<any, any>): string | keyof PackageSpec {
   if (typeof input === 'string') {
     return input;
+  } else if (input.hasOwnProperty('__isPackageSpec')) {
+    return requireOrThrow((input as PackageSpec)).serviceName;
   }
-  return input.serviceName;
+  return (input as Service<any, any>).serviceName;
 }
 
 export function dangerouslyResetRegistry() {
@@ -97,7 +99,7 @@ function getPath(o: any, ks: (string | number)[] = []): any {
   }
 }
 
-export type PackageSpec = {path?: string[], package: string};
+export type PackageSpec = {path?: string[], package: string, __isPackageSpec: true};
 
 /**
  * Creates a service that, when used, is loaded from the given node
@@ -105,17 +107,17 @@ export type PackageSpec = {path?: string[], package: string};
  * lodash get-style path (eg "abc.0.hi" to get "x" from {abc:[{hi:"x"}]}).
  */
 export function fromPackage(packageName: string, path?: string[]): PackageSpec {
-  return {path, package: packageName};
+  return {path, package: packageName, __isPackageSpec: true};
 }
 
 function parsePackage(s: string): PackageSpec {
   const parts = s.split('.');
-  return {path: parts.slice(1), package: parts[0]};
+  return {path: parts.slice(1), package: parts[0], __isPackageSpec: true};
 }
 
 const notFound = Symbol('Package not found');
-function tryRequire(p: string | PackageSpec): any {
-  if (typeof p === "string") {
+function tryRequire(p: string | PackageSpec): Service<any, any> | Symbol {
+  if (typeof p === 'string') {
     p = parsePackage(p);
   }
 
@@ -123,17 +125,16 @@ function tryRequire(p: string | PackageSpec): any {
     const service = getPath(require(p.package), (p.path || []));
     return service;
   } catch (e) {
-    console.log(e);
     return notFound;
   }
 }
 
-function requireOrThrow(p: string | PackageSpec): any {
+function requireOrThrow(p: string | PackageSpec): Service<any, any> {
   const required = tryRequire(p);
   if (required === notFound) {
     throw new Error(`Couldn't resolve dependency: "${p}"`);
   } else {
-    return required;
+    return (required as Service<any, any>);
   }
 }
 
@@ -156,13 +157,17 @@ export async function start(
     }
   }
 
-  const services = namesOrServices.map(nameOrService => {
+  const services: Service<any, any>[] = namesOrServices.map(nameOrService => {
     if (typeof nameOrService === 'string') {
-      return registry[nameOrService];
-    } else if (nameOrService.hasOwnProperty('package')) {
+      if (registry[nameOrService]) {
+        return registry[nameOrService];
+      } else {
+        throw new Error(`Couldn't find: "${nameOrService}"`);
+      }
+    } else if (nameOrService.hasOwnProperty('__isPackageSpec')) {
       return requireOrThrow(nameOrService as PackageSpec);
     } else {
-      return nameOrService;
+      return (nameOrService as Service<any, any>);
     }
   });
 

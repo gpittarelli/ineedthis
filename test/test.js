@@ -73,21 +73,48 @@ describe('ineedthis', () => {
     const fakeDir = path.join(__dirname, '..', 'node_modules', 'testPackageName'),
       fakeFile = path.join(fakeDir, 'index.js');
 
-    before(() => {
+    beforeEach(() => {
       fs.mkdirSync(fakeDir);
       fs.writeFileSync(fakeFile, `
 var ineedthis = require('../../lib/index.js');
 module.exports = ineedthis.createService('A', {start: () => () => 0});
+module.exports.prop1 = ineedthis.createService('A', {start: () => () => 0});
 `);
     });
 
-    after(() => {
+    afterEach(() => {
       fs.unlinkSync(fakeFile);
       fs.rmdirSync(fakeDir);
+      if (require.cache[path.resolve(fakeFile)]) {
+        delete require.cache[path.resolve(fakeFile)];
+      }
     });
 
-    it('packge name', () => {
-      return start({package: 'testPackageName'}).then(sys => {
+    it('package name', () => {
+      return start(fromPackage('testPackageName')).then(sys => {
+        expect(sys).to.deep.equal({A: 0});
+      });
+    });
+
+    it('package name as dependency', () => {
+      var B = createService('B', {
+        dependencies: [fromPackage('testPackageName')],
+        start: () => () => 1
+      });
+
+      return start(B).then(sys => {
+        expect(sys).to.deep.equal({A: 0, B: 1});
+      });
+    });
+
+    it('package name with hepler', () => {
+      return start(fromPackage('testPackageName')).then(sys => {
+        expect(sys).to.deep.equal({A: 0});
+      });
+    });
+
+    it('package name with hepler and path', () => {
+      return start(fromPackage('testPackageName', ['prop1'])).then(sys => {
         expect(sys).to.deep.equal({A: 0});
       });
     });
