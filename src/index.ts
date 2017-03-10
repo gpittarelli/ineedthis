@@ -1,4 +1,5 @@
-const {name, version}: {name: string, version: string} = require('../package');
+// tslint:disable-next-line:no-var-requires
+const {name: pkgName, version}: {name: string, version: string} = require('../package');
 
 export type StartFnT<T> = ((...args: any[]) => (partialSystem: System) => Promise<T>);
 
@@ -7,8 +8,8 @@ export type AliasedServiceName = {type: string, as: string};
 export type Service<T, StartFn extends StartFnT<T>> = {
   (...args: any[]): (partialSystem: System) => Promise<T>,
   // Don't conflict with Function.prototype.name
-  serviceName: ServiceName,
   dependencies: ServiceName[],
+  serviceName: ServiceName,
   start: StartFn;
   stop: ((instance: T) => void);
   [extraProps: string]: any
@@ -16,8 +17,8 @@ export type Service<T, StartFn extends StartFnT<T>> = {
 export type ServiceInstance<T, StartFn extends StartFnT<T>> = {
   (...args: any[]): (partialSystem: System) => Promise<T>,
   // Don't conflict with Function.prototype.name
-  serviceName: ServiceName,
   dependencies: ServiceName[],
+  serviceName: ServiceName,
   start: (partialSystem: System) => Promise<T>;
   stop: ((instance: T) => void);
   [extraProps: string]: any
@@ -32,18 +33,21 @@ export interface ServiceDescription<T, StartFn extends StartFnT<T>> {
   stop?: ((instance: T) => void);
 };
 
+export type PackageSpec = {path?: string[], package: string, __isPackageSpec: true};
+type FriendlyPackageSpec = string | PackageSpec | ServiceName | Service<any, any>;
+
 type ServiceRegistry = {[service in ServiceName]: Service<any, any>};
 
 // Persist registry across multiple instances of this module. Terrible
 // hack, but needed to support a truly 'global' registry in
 // environments such as lerna  or old npm verisons
-const registrySym = Symbol.for(`Global registry for ${name}@${version}`);
+const registrySym = Symbol.for(`Global registry for ${pkgName}@${version}`);
 if (!(global as any)[registrySym]) {
   (global as any)[registrySym] = {};
 }
 const registry: ServiceRegistry = (global as any)[registrySym];
 
-function dependencyOrService(input: string | PackageSpec | ServiceName | Service<any, any>): string | keyof PackageSpec {
+function dependencyOrService(input: FriendlyPackageSpec): string | keyof PackageSpec {
   if (typeof input === 'string') {
     return input;
   } else if (input.hasOwnProperty('__isPackageSpec')) {
@@ -64,7 +68,7 @@ function cloneFn<T>(fn: ((...args: any[]) => T)): ((...args: any[]) => T) {
 
 export function createService<T, StartFn extends StartFnT<T>>(
   name: ServiceName,
-  description: ServiceDescription<T, StartFn>
+  description: ServiceDescription<T, StartFn>,
 ): Service<T, StartFn> {
   const defaultedDescription = {...description};
   if (!Array.isArray(defaultedDescription.dependencies)) {
@@ -77,10 +81,10 @@ export function createService<T, StartFn extends StartFnT<T>>(
 
   const start: StartFn = (cloneFn(defaultedDescription.start) as any),
     service: Service<T, StartFn> = (Object.assign(start, {
-      serviceName: name,
       dependencies: defaultedDescription.dependencies,
+      serviceName: name,
       start,
-      stop: defaultedDescription.stop
+      stop: defaultedDescription.stop,
     }) as any);
 
   registry[name] = service;
@@ -98,8 +102,6 @@ function getPath(o: any, ks: (string | number)[] = []): any {
     return getPath(o[ks[0]], ks.slice(1));
   }
 }
-
-export type PackageSpec = {path?: string[], package: string, __isPackageSpec: true};
 
 /**
  * Creates a service that, when used, is loaded from the given node
@@ -141,7 +143,7 @@ function requireOrThrow(p: string | PackageSpec): Service<any, any> {
 // TODO: Can get rid of 'any' once Variadic Kinds lands (TS issue #5453)
 export async function start(
   namesOrServices: (ServiceName | PackageSpec | Service<any, any> | (PackageSpec | Service<any, any> | ServiceName)[]),
-  overrides: System = {}
+  overrides: System = {},
 ): Promise<System> {
   if (!Array.isArray(namesOrServices)) {
     namesOrServices = [namesOrServices];
@@ -242,7 +244,7 @@ export async function stop(system: System): Promise<void> {
   do {
     for (const [s, remainingDependents] of Object.entries(countDependents)) {
       if (remainingDependents === 0 && !outstandingShutdowns[s] && !finishedShutdowns[s]) {
-        outstandingShutdowns[s] = (async function () {
+        outstandingShutdowns[s] = (async () => {
           const service = registry[s];
           await service.stop(service);
           finishedShutdowns[s] = true;
