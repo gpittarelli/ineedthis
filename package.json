@@ -11,9 +11,10 @@
     "test": "npm run build && npm run test:nobuild",
     "test:nobuild": "mocha $MOCHA_OPTS",
     "test:watch": "nodemon --watch lib --watch test -x 'npm -s run test:nobuild'",
-    "dev": "concurrently --prefix '[{name}]' --names 'TS,Babel,Mocha' 'tsc -w' 'npm run build:babel -- -w' 'npm run test:watch'",
-    "clean": "rimraf lib lib.es6",
     "lint": "tslint 'src/**/*.ts'",
+    "lint:watch": "nodemon --watch src -x 'npm -s run lint'",
+    "dev": "concurrently --prefix '[{name}]' --names 'TS,Babel,Mocha,Lint' 'tsc -w' 'npm run build:babel -- -w' 'npm run test:watch' 'npm run lint:watch'",
+    "clean": "rimraf lib lib.es6",
     "prepublish": "npm run build"
   },
   "files": [
