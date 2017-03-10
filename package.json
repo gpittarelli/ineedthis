@@ -9,7 +9,7 @@
     "build": "npm run clean && tsc && npm run build:babel",
     "build:watch": "concurrently 'tsc -w' 'npm run build:babel -- -w'",
     "test": "npm run build && npm run test:nobuild",
-    "test:nobuild": "mocha $MOCHA_OPTS",
+    "test:nobuild": "mocha -r source-map-support/register $MOCHA_OPTS",
     "test:watch": "nodemon --watch lib --watch test -x 'npm -s run test:nobuild'",
     "lint": "tslint 'src/**/*.ts'",
     "lint:watch": "nodemon --watch src -x 'npm -s run lint'",
