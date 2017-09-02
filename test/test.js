@@ -211,4 +211,15 @@ module.exports.prop1 = ineedthis.createService('A', {start: () => () => 0});
         ]);
       });
   });
+
+  it('passes launched service to stop', () => {
+    var secret = Math.random(),
+      A = createService('A', {
+        start: () => () => secret,
+        stop: service => expect(service).to.equal(secret)
+      });
+
+    return start(A)
+      .then(system => stop(system));
+  });
 });

@@ -246,7 +246,7 @@ export async function stop(system: System): Promise<void> {
       if (remainingDependents === 0 && !outstandingShutdowns[s] && !finishedShutdowns[s]) {
         outstandingShutdowns[s] = (async () => {
           const service = registry[s];
-          await service.stop(service);
+          await service.stop(system[s]);
           finishedShutdowns[s] = true;
           delete outstandingShutdowns[s];
           for (const d of service.dependencies.map(dependencyOrService)) {
