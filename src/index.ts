@@ -206,7 +206,8 @@ export async function start(
     return service;
   }
 
-  while (Object.keys(outstandingDeps).length > 0) {
+  while (Object.keys(outstandingDeps).length > 0 ||
+        Object.keys(outstandingLoads).length > 0) {
     // Start loading any deps that are no longer waiting for another dep
     for (const [name, deps] of Object.entries(outstandingDeps)) {
       if (deps.size === 0) {

@@ -31,6 +31,20 @@ describe('ineedthis', () => {
     });
   });
 
+  it('Wait for all async services to start', () => {
+    var A = createService('A', {start: () => () => delay(100, 0)}),
+      B = createService('B', {start: () => () => 1}),
+      C = createService('C', {dependencies: ['B'], start: () => () => delay(50, 2)});
+
+    return start([A, C]).then(sys => {
+      expect(sys).to.deep.equal({
+        A: 0,
+        B: 1,
+        C: 2
+      });
+    });
+  });
+
   it('basic functionality works with main service specified as a string', () => {
     var A = createService('A', {start: () => () => 0}),
       B = createService('B', {dependencies: ['A'], start: () => () => 1}),
