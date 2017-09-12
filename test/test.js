@@ -188,6 +188,36 @@ module.exports.prop1 = ineedthis.createService('A', {start: () => () => 0});
     });
   });
 
+  it('fails on the first error', () => {
+    var A = createService('A', {dependencies: [], start: () => () => (
+      new Promise((resolve, reject) => reject(new Error('test')))
+    )}),
+      B = createService('B', {dependencies: ['A'], start: () => () => 1});
+
+    return expect(start(B)).to.eventually.be.rejectedWith(Error, 'test');
+  });
+
+  it('fails on immediate code errors in the final service', () => {
+    var A = createService('A', {dependencies: [], start: () => () => 1}),
+      B = createService('B', {dependencies: ['A'], start: () => () => 2}),
+      C = createService('C', {dependencies: ['B'], start: () => () => x + 1});
+
+    // 'x is not defined' or some such
+    return expect(start(C)).to.eventually.be.rejectedWith(Error);
+  });
+
+  it('fails on error in 1 of 2 target services', () => {
+    var A = createService('A', {dependencies: [], start: () => () => 1}),
+      B = createService('B', {dependencies: ['A'], start: () => () => 2}),
+      C = createService('C', {dependencies: ['B'], start: () => () => (
+        new Promise((r, reject) => setTimeout(()=>reject(new Error()), 100))
+      )}),
+      D = createService('D', {dependencies: ['B'], start: () => () => 4});
+
+    // 'x is not defined' or some such
+    return expect(start([C, D])).to.eventually.be.rejectedWith(Error);
+  });
+
   it('detects cycles', () => {
     var A = createService('A', {dependencies: ['B'], start: () => () => 0}),
       B = createService('B', {dependencies: ['A'], start: () => () => 1});
