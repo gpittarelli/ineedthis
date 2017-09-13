@@ -244,7 +244,10 @@ export async function stop(system: System): Promise<void> {
     finishedShutdowns: {[s in ServiceName]: boolean} = {};
   do {
     for (const [s, remainingDependents] of Object.entries(countDependents)) {
-      if (remainingDependents === 0 && !outstandingShutdowns[s] && !finishedShutdowns[s]) {
+      if (remainingDependents === 0 &&
+          !outstandingShutdowns[s] &&
+          !finishedShutdowns[s]) {
+
         outstandingShutdowns[s] = (async () => {
           const service = registry[s];
           await service.stop(system[s]);
@@ -254,6 +257,7 @@ export async function stop(system: System): Promise<void> {
             countDependents[d]--;
           }
         })();
+
       }
     }
 

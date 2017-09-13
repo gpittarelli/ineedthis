@@ -256,6 +256,37 @@ module.exports.prop1 = ineedthis.createService('A', {start: () => () => 0});
       });
   });
 
+  it('stops concurrently', () => {
+    var log = [],
+      A = createService('A', {
+        start: () => () => (log.push('start A'), 0),
+        stop: () => log.push('stop A')
+      }),
+      B = createService('B', {
+        dependencies: ['A'],
+        start: () => () => (log.push('start B'), 1),
+        stop: () => delay(10).then(() => log.push('stop B'))
+      }),
+      C = createService('C', {
+        dependencies: ['A'],
+        start: () => () => (log.push('start C'), 2),
+        stop: () => delay(0).then(() => log.push('stop C'))
+      });
+
+    return start([B, C])
+      .then(system => stop(system))
+      .then(() => {
+        expect(log).to.deep.equal([
+          'start A',
+          'start B',
+          'start C',
+          'stop C',
+          'stop B',
+          'stop A'
+        ]);
+      });
+  });
+
   it('passes launched service to stop', () => {
     var secret = Math.random(),
       A = createService('A', {
