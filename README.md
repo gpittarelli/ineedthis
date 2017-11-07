@@ -173,6 +173,12 @@ ServiceName.
 Starts the specified service(s), resolving all their
 dependencies. Returns a system--a map of all the initialized services.a
 
+### partial restarting
+
+See `stopPartial` and `startPartial` for partially reloading only
+certain bits of a system without having to restart every individual
+service.
+
 ## Development
 
 `npm run test/clean/build` work as expected.
