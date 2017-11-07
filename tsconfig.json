@@ -3,7 +3,6 @@
     "noImplicitAny": true,
     "strictNullChecks": true,
     "alwaysStrict": true,
-    "noUnusedLocals": true,
     "suppressExcessPropertyErrors": true,
     "declaration": true,
     "inlineSourceMap": true,
