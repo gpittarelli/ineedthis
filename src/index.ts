@@ -66,8 +66,14 @@ function cloneFn<T>(fn: ((...args: any[]) => T)): ((...args: any[]) => T) {
   return (...args: any[]) => fn(...args);
 }
 
+/**
+ * Create a service named `name` with start, stop, etc as defined in
+ * `description`.
+ *
+ * Leave `name` undefined to create an anonymous service.
+ */
 export function createService<T, StartFn extends StartFnT<T>>(
-  name: ServiceName,
+  name: ServiceName | undefined,
   description: ServiceDescription<T, StartFn>,
 ): Service<T, StartFn> {
   const defaultedDescription = {...description};
@@ -87,7 +93,9 @@ export function createService<T, StartFn extends StartFnT<T>>(
       stop: defaultedDescription.stop,
     }) as any);
 
-  registry[name] = service;
+  if (name) {
+    registry[name] = service;
+  }
   return service;
 }
 
@@ -143,11 +151,15 @@ function requireOrThrow(p: string | PackageSpec): Service<any, any> {
 // TODO: Can get rid of 'any' once Variadic Kinds lands (TS issue #5453)
 export async function start(
   namesOrServices: (ServiceName | PackageSpec | Service<any, any> | (PackageSpec | Service<any, any> | ServiceName)[]),
-  overrides: System = {},
+  overridesIn: System = {},
 ): Promise<System> {
   if (!Array.isArray(namesOrServices)) {
     namesOrServices = [namesOrServices];
   }
+
+  // Clone, so we don't override the input
+  const overrides: System = {};
+  Object.assign(overrides, overridesIn);
 
   function resolve(serviceName: ServiceName): Service<any, any> {
     if (overrides && overrides[serviceName]) {
@@ -228,7 +240,14 @@ export async function start(
   return system;
 }
 
-export async function stop(system: System): Promise<void> {
+/**
+ * Stop system. If a spec of systems `partial` is supplied, stop only
+ * those systems and any "higher" systems that rely on them, but
+ * others will be left alone.
+ */
+export async function stop(
+  system: System,
+): Promise<void> {
   const countDependents: {[s in ServiceName]: number} = {};
   for (const s of Object.keys(system)) {
     countDependents[s] = 0;
@@ -263,4 +282,95 @@ export async function stop(system: System): Promise<void> {
 
     await Promise.race(Object.values(outstandingShutdowns));
   } while (Object.keys(finishedShutdowns).length < Object.keys(system).length);
+}
+
+/**
+ * Stop system. If a spec of systems `partial` is supplied, stop only
+ * those systems and any "higher" systems that rely on them, but
+ * others will be left alone.
+ *
+ * Returns the list of services names that were shutdown
+ */
+export async function stopPartial(
+  system: System,
+  partial: ServiceName[],
+): Promise<ServiceName[]> {
+  // Reverse the service graph to get a map of dependents, instead of
+  // dependencies
+  const dependents: {[s in ServiceName]: ServiceName[]} = {};
+  for (const s of Object.keys(system)) {
+    dependents[s] = [];
+  }
+  for (const s of Object.keys(system)) {
+    for (const d of registry[s].dependencies.map(dependencyOrService)) {
+      if (system[d]) {
+        dependents[d].push(s);
+      }
+    }
+  }
+
+  // Follow all dependent relationships from the target "partial"
+  // subgraph to be shutdown
+  const toShutdown = new Set(),
+    toVisit = partial.slice(),
+    visited = new Set();
+  let visiting;
+  while (visiting = toVisit.pop()) {
+    visited.add(visiting);
+    toShutdown.add(visiting);
+
+    for (const s of dependents[visiting]) {
+      if (!visited.has(s)) {
+        toVisit.push(s);
+      }
+    }
+  }
+
+  const partialSystem: System = {},
+    output = [];
+  for (const s of toShutdown) {
+    partialSystem[s] = system[s];
+    output.push(s);
+  }
+
+  await stop(partialSystem);
+
+  return output;
+}
+
+const noopService: ServiceDescription<any, any> = createService(undefined, {
+  start: () => async () => undefined,
+});
+
+/**
+ * Restart services named in `partial` using the existing `system`
+ */
+export async function startPartial(
+  system: System,
+  partial: ServiceName[],
+): Promise<System> {
+  // Mock out existing services with `noopService`, then relaunch the
+  // full system with those mocks to recreate the services requested
+  // in `partial`, and finally merge those newly launched services
+  // back into the existing system.
+
+  const mocks: System = {};
+  for (const s of Object.keys(system)) {
+    if (!partial.includes(s)) {
+      mocks[s] = noopService;
+    }
+  }
+
+  const newServices = await start(partial, mocks);
+
+  const finalSystem: System = {};
+  for (const s of Object.keys(newServices)) {
+    if (mocks.hasOwnProperty(s)) {
+      finalSystem[s] = system[s];
+    } else {
+      finalSystem[s] = newServices[s];
+    }
+  }
+
+  return finalSystem;
 }

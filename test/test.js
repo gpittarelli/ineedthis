@@ -6,6 +6,8 @@ var path = require('path'),
   createService = ineedthis.createService,
   start = ineedthis.start,
   stop = ineedthis.stop,
+  stopPartial = ineedthis.stopPartial,
+  startPartial = ineedthis.startPartial,
   fromPackage = ineedthis.fromPackage;
 
 function delay(d, x) {
@@ -43,6 +45,88 @@ describe('ineedthis', () => {
         C: 2
       });
     });
+  });
+
+  it('Reload', () => {
+    var A = createService('A', {start: () => () => 'A', stop() {throw new Error('Stopped A');}}),
+      B = createService('B', {dependencies: ['A'], start: () => () => 'B'}),
+      C = createService('C', {dependencies: ['B'], start: () => () => 'C'});
+
+    return start([C]).then(sys => {
+      expect(sys).to.deep.equal({
+        A: 'A',
+        B: 'B',
+        C: 'C'
+      });
+
+      var partial = {
+        B: ''
+      };
+
+      return stopPartial(sys, ['B']);
+    }).then(result => {
+      expect(result).to.deep.equal(['B', 'C']);
+    });
+  });
+
+  it('Reload2', () => {
+    var log = [],
+      t = 'time0',
+      A = createService('A', {
+        start: () => () => (log.push('start A'), 0 + t),
+        stop: () => log.push('stop A')
+      }),
+      B = createService('B', {
+        dependencies: ['A'],
+        start: () => () => (log.push('start B'), 1 + t),
+        stop: () => log.push('stop B')
+      }),
+      C = createService('C', {
+        dependencies: ['B'],
+        start: () => () => (log.push('start C'), 2 + t),
+        stop: () => log.push('stop C')
+      });
+
+    return start(C)
+      .then(system => {
+        expect(system).to.deep.equal({
+          A: '0time0',
+          B: '1time0',
+          C: '2time0'
+        });
+
+        return stopPartial(system, ['B']).then(res => {
+          expect(log).to.deep.equal([
+            'start A',
+            'start B',
+            'start C',
+            'stop C',
+            'stop B'
+          ]);
+
+          expect(res).to.deep.equal(['B', 'C']);
+
+          t = 'time1';
+
+          return startPartial(system, res);
+        }).then(newSys => {
+          expect(log).to.deep.equal([
+            'start A',
+            'start B',
+            'start C',
+            'stop C',
+            'stop B',
+            'start B',
+            'start C'
+          ]);
+
+          expect(newSys).to.deep.equal({
+            A: '0time0',
+            B: '1time1',
+            C: '2time1'
+          });
+        });
+      });
   });
 
   it('basic functionality works with main service specified as a string', () => {
