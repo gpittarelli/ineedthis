@@ -338,9 +338,12 @@ export async function stopPartial(
   return output;
 }
 
-const noopService: ServiceDescription<any, any> = createService(undefined, {
-  start: () => async () => undefined,
-});
+const noopService: ((x: any) => ServiceDescription<any, any>) = x =>
+  createService(
+    undefined, {
+      start: () => async () => x,
+    }
+  );
 
 /**
  * Restart services named in `partial` using the existing `system`
@@ -357,7 +360,7 @@ export async function startPartial(
   const mocks: System = {};
   for (const s of Object.keys(system)) {
     if (!partial.includes(s)) {
-      mocks[s] = noopService;
+      mocks[s] = noopService(system[s]);
     }
   }
 

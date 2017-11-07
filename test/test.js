@@ -78,12 +78,12 @@ describe('ineedthis', () => {
       }),
       B = createService('B', {
         dependencies: ['A'],
-        start: () => () => (log.push('start B'), 1 + t),
+        start: () => (s) => (log.push('start B: ' + s.A), 1 + t),
         stop: () => log.push('stop B')
       }),
       C = createService('C', {
         dependencies: ['B'],
-        start: () => () => (log.push('start C'), 2 + t),
+        start: () => (s) => (log.push('start C: ' + s.B), 2 + t),
         stop: () => log.push('stop C')
       });
 
@@ -96,14 +96,6 @@ describe('ineedthis', () => {
         });
 
         return stopPartial(system, ['B']).then(res => {
-          expect(log).to.deep.equal([
-            'start A',
-            'start B',
-            'start C',
-            'stop C',
-            'stop B'
-          ]);
-
           expect(res).to.deep.equal(['B', 'C']);
 
           t = 'time1';
@@ -112,12 +104,12 @@ describe('ineedthis', () => {
         }).then(newSys => {
           expect(log).to.deep.equal([
             'start A',
-            'start B',
-            'start C',
+            'start B: 0time0',
+            'start C: 1time0',
             'stop C',
             'stop B',
-            'start B',
-            'start C'
+            'start B: 0time0',
+            'start C: 1time1'
           ]);
 
           expect(newSys).to.deep.equal({
