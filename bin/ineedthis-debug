@@ -10,6 +10,8 @@ var ineedthis = require('ineedthis');
 var start = ineedthis.start;
 var stop = ineedthis.stop;
 
+var cwd = process.cwd();
+
 // filename -> [service names defined in it]
 var serviceDefs = Object.create(null);
 
@@ -65,7 +67,7 @@ modulePrototype.require = function (moduleName) {
 };
 
 var watcher = chokidar.watch(
-  module.paths.concat(path.join(__dirname, 'dist')), {
+  module.paths.concat(path.join(cwd)), {
     ignored: /(^|[\/\\])\../,
     persistent: true
   });
@@ -93,7 +95,6 @@ const flatten = a => [].concat(...a);
 var log = console.log.bind(console);
 // Add event listeners.
 watcher
-  .on('add', path => log(`File ${path} has been added`))
   .on('change', path => {
     var affected = taintedFrom(requireGraph, path).filter(function(p) {
       return p !== __filename;
@@ -118,15 +119,14 @@ watcher
         });
       });
     }
-  })
-  .on('unlink', path => log(`File ${path} has been removed`));
+  });
 
 function load(p) {
   var m = require(resolve.sync(p, {
-    basedir: __dirname,
+    basedir: cwd,
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     // This allows relative paths:
-    paths: [__dirname]
+    paths: [cwd]
   }));
   return m.__esModule ? m.default : m;
 }

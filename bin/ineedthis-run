@@ -7,12 +7,14 @@ var ineedthis = require('ineedthis');
 var start = ineedthis.start;
 var stop = ineedthis.stop;
 
+var cwd = process.cwd();
+
 function load(p) {
   var m = require(resolve.sync(p, {
-    basedir: __dirname,
+    basedir: cwd,
     extensions: ['.js', '.json'],
     // This allows relative paths:
-    paths: [__dirname]
+    paths: [cwd]
   }));
   return m.__esModule ? m.default : m;
 }
