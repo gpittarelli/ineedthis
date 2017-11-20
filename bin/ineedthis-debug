@@ -63,7 +63,7 @@ modulePrototype.require = function (moduleName) {
     dependsOn.push(this.filename);
   }
 
-  return originalRequire.call(this, filePath);
+  return originalRequire.call(this, moduleName);
 };
 
 var watcher = chokidar.watch(
