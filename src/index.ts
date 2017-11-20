@@ -356,7 +356,7 @@ const noopService: ((x: any) => ServiceDescription<any, any>) = x =>
   createService(
     undefined, {
       start: () => async () => x,
-    }
+    },
   );
 
 /**
