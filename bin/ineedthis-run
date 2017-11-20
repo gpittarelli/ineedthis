@@ -63,8 +63,10 @@ start(args.map(load)).then(function (system) {
     console.error('Shutting down...');
     stop(system).then(() => {
       console.log('Shutdown complete.');
+      process.exit(0);
     }).catch(function (e) {
       console.error('Could not shut down', e);
+      process.exit(1);)
     });
   });
 }, function (err) {
