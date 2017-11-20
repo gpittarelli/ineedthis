@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+
+var Module = require('module').Module;
+var resolve = require('resolve');
+var path = require('path');
+var ineedthis = require('ineedthis');
+var start = ineedthis.start;
+var stop = ineedthis.stop;
+
+function load(p) {
+  var m = require(resolve.sync(p, {
+    basedir: __dirname,
+    extensions: ['.js', '.json'],
+    // This allows relative paths:
+    paths: [__dirname]
+  }));
+  return m.__esModule ? m.default : m;
+}
+
+function usage() {
+  console.error(
+'USAGE: ineedthis-run [-r MODULE] [-h] SERVICE_MODULE...\n' +
+'\n' +
+'Launches the given SERVICE_MODULEs with ineedthis.start()\n' +
+'\n' +
+'   -r MODULE     Require module before launching\n' +
+'   -h            Print this help message'
+  );
+}
+
+var args = process.argv.slice(2),
+  arg;
+
+if (args.indexOf('-h') !== -1) {
+  usage();
+  process.exit();
+}
+
+for (var i = 0; i < args.length; ++i) {
+  arg = args[i];
+  if (arg === '-r') {
+    arg = args[i + 1];
+    if (!arg) {
+      console.error('ERROR: No module provided to -r to be required');
+      process.exit(1);
+    }
+    load(arg);
+    args.splice(i, 2);
+    i--;
+  }
+}
+
+start(args.map(load)).then(function (system) {
+  var stopping = false;
+  process.on('SIGINT', function () {
+    if (stopping) {
+      process.exit(1);
+    }
+    stopping = true;
+
+    console.error('Shutting down...');
+    stop(system).then(() => {
+      console.log('Shutdown complete.');
+    }).catch(function (e) {
+      console.error('Could not shut down', e);
+    });
+  });
+}, function (err) {
+  console.error('Startup error:', err);
+  process.exit(1);
+});
