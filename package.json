@@ -19,6 +19,7 @@
   },
   "bin": {
     "ineedthis-debug": "./bin/ineedthis-debug",
+    "ineedthis-watch": "./bin/ineedthis-debug",
     "ineedthis-run": "./bin/ineedthis-run"
   },
   "files": [
