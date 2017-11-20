@@ -45,7 +45,9 @@ modulePrototype.require = function (moduleName) {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json']
   });
 
-  // Here, we are tracking that moduleName was require()'d from filePath
+  // Here, we are tracking that moduleName was require()'d from this.filename.
+  // Make sure those files are being watched:
+  watcher.add(filePath);
 
   var requiredBy = depGraph[this.filename];
   if (!requiredBy) {
