@@ -23,6 +23,7 @@
   },
   "files": [
     "lib",
+    "bin",
     "lib.es6/index.d.ts"
   ],
   "repository": {
