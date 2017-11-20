@@ -130,6 +130,27 @@ start(App, {
 }).catch(err => { /* */ });
 ```
 
+## Runners
+
+Often JS apps have a slightly awkward need for a separate startup
+script to actually launch the desired services. `ineedthis` provides
+two scripts you can use to do this automatically for you:
+
+  - `ineedthis-run` starts services that are the default exports of
+    all files listed on the command lines.
+  - `ineedthis-debug` is the same as `-run`, except it also
+    automatically handles tracking all the files used in the started
+    systems and watching for changes to them. When a change is
+    detected, all affected services are restarted with the files being
+    hot-reloaded. This can be much faster than having to fully restart
+    the `node` process, as the `requrie` cache is still hot and
+    unaffected services which may take a long time to start stay
+    running. A complex webserver with DB and other connections can
+    typically hot reload route file changes in this way in a fraction
+    of a second.
+
+Note: these are currently especially alpha/hacky
+
 ## API
 
 Types: (ala TypeScript)
