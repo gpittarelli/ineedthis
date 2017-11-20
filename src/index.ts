@@ -40,12 +40,24 @@ type ServiceRegistry = {[service in ServiceName]: Service<any, any>};
 
 // Persist registry across multiple instances of this module. Terrible
 // hack, but needed to support a truly 'global' registry in
-// environments such as lerna  or old npm verisons
+// environments such as lerna or old npm verisons
 const registrySym = Symbol.for(`Global registry for ${pkgName}@${version}`);
 if (!(global as any)[registrySym]) {
   (global as any)[registrySym] = {};
 }
 const registry: ServiceRegistry = (global as any)[registrySym];
+
+function isFunction(o: any): boolean {
+  return typeof o === 'function';
+}
+
+function isArray(o: any): boolean {
+  return typeof o === 'object' && o instanceof Array;
+}
+
+function isService(o: any): boolean {
+  return isFunction(o) && isFunction(o.start) && isFunction(o.stop) && isArray(o.dependencies);
+}
 
 function dependencyOrService(input: FriendlyPackageSpec): string | keyof PackageSpec {
   if (typeof input === 'string') {
@@ -143,6 +155,8 @@ function requireOrThrow(p: string | PackageSpec): Service<any, any> {
   const required = tryRequire(p);
   if (required === notFound) {
     throw new Error(`Couldn't resolve dependency: "${p}"`);
+  } else if (!isService(required)) {
+    throw new Error(`Resolved "${p}" but expected a Service, not "${required}"`);
   } else {
     return (required as Service<any, any>);
   }
