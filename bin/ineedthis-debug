@@ -128,7 +128,7 @@ function load(p) {
     // This allows relative paths:
     paths: [cwd]
   }));
-  return m.__esModule ? m.default : m;
+  return (m.__esModule && m.default) ? m.default : m;
 }
 
 function usage() {
