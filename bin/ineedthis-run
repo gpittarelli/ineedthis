@@ -66,7 +66,7 @@ start(args.map(load)).then(function (system) {
       process.exit(0);
     }).catch(function (e) {
       console.error('Could not shut down', e);
-      process.exit(1);)
+      process.exit(1);
     });
   });
 }, function (err) {
