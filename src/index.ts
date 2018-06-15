@@ -210,9 +210,9 @@ export async function start(
   const outstandingDeps: {[s in ServiceName]: Set<ServiceName>} = {};
   let toProcess = new Set(services.map(s => s.serviceName));
   do {
-    for (const s of toProcess) {
+    toProcess.forEach(s => {
       outstandingDeps[s] = new Set(resolve(s).dependencies.map(dependencyOrService));
-    }
+    });
 
     toProcess = new Set(flatten(Object.values(outstandingDeps)));
     Object.keys(outstandingDeps).forEach(k => toProcess.delete(k));
@@ -341,11 +341,11 @@ export async function stopPartial(
   }
 
   const partialSystem: System = {},
-    output = [];
-  for (const s of toShutdown) {
+    output: string[] = [];
+  toShutdown.forEach(s => {
     partialSystem[s] = system[s];
     output.push(s);
-  }
+  });
 
   await stop(partialSystem);
 
