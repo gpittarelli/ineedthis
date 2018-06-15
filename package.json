@@ -5,16 +5,16 @@
   "main": "./lib/index.js",
   "types": "./lib.es6/index.d.ts",
   "scripts": {
-    "build:babel": "babel --source-maps=inline lib.es6/ --out-dir lib/",
-    "build": "npm run clean && tsc && npm run build:babel",
-    "build:watch": "concurrently 'tsc -w' 'npm run build:babel -- -w'",
+    "build": "npm run clean && tsc && tsc -t es6 --outDir lib.es6/",
+    "build:watch": "tsc -w",
     "test": "npm run build && npm run test:nobuild",
     "test:nobuild": "mocha -r source-map-support/register $MOCHA_OPTS",
     "test:watch": "nodemon --watch lib --watch test -x 'npm -s run test:nobuild'",
     "lint": "tslint 'src/**/*.ts'",
     "lint:watch": "nodemon --watch src -x 'npm -s run lint'",
-    "dev": "concurrently --prefix '[{name}]' --names 'TS,Babel,Mocha,Lint' 'tsc -w' 'npm run build:babel -- -w' 'npm run test:watch' 'npm run lint:watch'",
+    "dev": "concurrently --prefix '[{name}]' --names 'TS,Mocha,Lint' 'npm run build:watch' 'npm run test:watch' 'npm run lint:watch'",
     "clean": "rimraf lib lib.es6",
+    "prepare": "npm run build",
     "prepublish": "npm run build"
   },
   "bin": {
@@ -25,7 +25,7 @@
   "files": [
     "lib",
     "bin",
-    "lib.es6/index.d.ts"
+    "lib.es6"
   ],
   "repository": {
     "type": "git",
@@ -49,9 +49,6 @@
   "homepage": "https://github.com/gpittarelli/ineedthis#readme",
   "devDependencies": {
     "@types/node": "7.0.5",
-    "babel-cli": "^6.22.2",
-    "babel-plugin-transform-runtime": "^6.22.0",
-    "babel-preset-es2015": "^6.22.0",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "concurrently": "3.1.0",
@@ -62,16 +59,7 @@
     "tslint": "4.5.1",
     "typescript": "2.6.1"
   },
-  "babel": {
-    "presets": [
-      "es2015"
-    ],
-    "plugins": [
-      "transform-runtime"
-    ]
-  },
   "dependencies": {
-    "babel-runtime": "^6.22.0",
     "callsite": "1.0.0",
     "chokidar": "1.7.0",
     "require-reload": "0.2.2",
