@@ -1,6 +1,4 @@
-var ineedthis = require('./index.js');
-var createService = ineedthis.createService;
-var start = ineedthis.start;
+const {createService, start} = require('.');
 
 const db = {
   connect: () => ({close: () => void 0})
