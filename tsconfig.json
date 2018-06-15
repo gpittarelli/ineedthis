@@ -11,7 +11,7 @@
     "target": "es5",
     "module": "CommonJS",
     "types": ["node"],
-    "outDir": "lib.es6"
+    "outDir": "lib"
   },
   "include": [
     "src/**/*"
