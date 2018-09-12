@@ -95,10 +95,14 @@ function taintedFrom(graph, path) {
 var uniq = a => [...new Set(a)];
 var flatten = a => [].concat(...a);
 
+var verbose = process.env.INEEDTHIS_DEBUG === 'true';
+
 var log = console.log.bind(console);
 // Add event listeners.
 watcher
   .on('change', path => {
+    var startTime = Date.now();
+
     var affected = taintedFrom(requireGraph, path).filter(function(p) {
       return p !== __filename;
     });
@@ -106,20 +110,59 @@ watcher
     var affectedServices =
       uniq(flatten(affected.map(p => serviceDefs[p]).filter(Boolean)));
 
-    log(`File ${path} has been changed`);
+    if (verbose) {
+      log(`File ${path} has been changed`);
+      log(
+        '  Affected services:', affectedServices,
+        '\n  Already restarting: ', restarting
+      );
+    }
 
     if (affectedServices && affectedServices.length>0 && !restarting) {
-      console.log('Restarting services: ', affectedServices.join(' '));
+      log('Restarting services: ', affectedServices.join(' '));
       restarting = true;
-      ineedthis.stopPartial(targetSystem, affectedServices).then(shutdown => {
-        console.log('Reloading code for affected modules...');
-        affected.forEach(p => reload(p));
-        console.log('Done reloading code');
-        ineedthis.startPartial(targetSystem, shutdown).then(newSys => {
-          console.log('Done restarting services!');
-          targetSystem = newSys;
-          restarting = false;
+
+      var shutdown;
+      ineedthis.stopPartial(targetSystem, affectedServices).then(shutdown_ => {
+        shutdown = shutdown_;
+
+        log('Reloading code for affected modules...');
+        if (verbose) {
+          log('Reloading', affected.length, 'modules');
+        }
+
+        var i = 0;
+        affected.forEach(p => {
+          if (verbose) {
+            log('Start reload: ', p);
+          }
+
+          try {
+            reload(p);
+          } catch (e) {
+            console.error('Failed reloading', p, e);
+          }
+
+          if (verbose) {
+            log('Done reload: ', p, ++i);
+          }
         });
+
+        return shutdown;
+      }).catch(e => {
+        console.error('Error during reload: ', e);
+      }).then(() => {
+        log('Done reloading code');
+        return ineedthis.startPartial(targetSystem, shutdown);
+      }).then(newSys => {
+        log(
+          'Done restarting services! in',
+          ((Date.now() - startTime) / 1000).toLocaleString() + 's'
+        );
+        targetSystem = newSys;
+        restarting = false;
+      }).catch(e => {
+        console.error('Error restarting services', e);
       });
     }
   });
