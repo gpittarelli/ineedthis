@@ -41,6 +41,7 @@ const modulePrototype = Module.prototype;
 const originalRequire = modulePrototype.require;
 modulePrototype.require = function (moduleName) {
   const filePath = resolve.sync(moduleName, {
+    preserveSymlinks: false,
     basedir: path.dirname(this.filename),
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json']
   });
