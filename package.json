@@ -14,8 +14,7 @@
     "lint:watch": "nodemon --watch src -x 'npm -s run lint'",
     "dev": "concurrently --prefix '[{name}]' --names 'TS,Mocha,Lint' 'npm run build:watch' 'npm run test:watch' 'npm run lint:watch'",
     "clean": "rimraf lib lib.es6",
-    "prepare": "npm run build",
-    "prepublish": "npm run build"
+    "prepare": "npm run build"
   },
   "bin": {
     "ineedthis-debug": "./bin/ineedthis-debug",
