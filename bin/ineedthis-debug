@@ -92,8 +92,8 @@ function taintedFrom(graph, path) {
   return Array.from(a);
 }
 
-const uniq = a => [...new Set(a)];
-const flatten = a => [].concat(...a);
+var uniq = a => [...new Set(a)];
+var flatten = a => [].concat(...a);
 
 var log = console.log.bind(console);
 // Add event listeners.
