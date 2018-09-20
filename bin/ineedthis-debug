@@ -21,6 +21,10 @@ var depGraph = Object.create(null);
 // filename -> [filenames it has required]
 var requireGraph = Object.create(null);
 
+// absolute path -> bool; to be sure not to double-register filesystem
+// watchers
+const watchedPaths = Object.create(null);
+
 // Override createService() to track what files services are defined in
 const realCreateService = ineedthis.createService;
 ineedthis.createService = function(name, service) {
@@ -48,7 +52,11 @@ modulePrototype.require = function (moduleName) {
 
   // Here, we are tracking that moduleName was require()'d from this.filename.
   // Make sure those files are being watched:
-  watcher.add(filePath);
+  const watchPath = path.dirname(filePath);
+  if (path.isAbsolute(watchPath) && !watchedPaths[watchPath]) {
+    watcher.add(watchPath);
+    watchedPaths[watchPath] = true;
+  }
 
   var requiredBy = depGraph[this.filename];
   if (!requiredBy) {
