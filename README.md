@@ -12,10 +12,10 @@ turn uses a database connection, a cache connection, a configuration
 service, etc.
 
 It is designed to be flexible enough to handle all sorts of services
-(eg stateless, constant state (eg configuration), network connections,
-thread pools, etc.). It handles describing, starting, and linking
-together those services while not imposing anything on the shape or
-further use of those services.
+(stateless, constant state (eg static configuration), network
+connections, thread pools, etc.). It handles describing, starting, and
+linking together those services while not imposing any structure on
+the shape or further use of those services.
 
 The API is designed with an opinionated default usage, but also with
 the flexibility to support any custom semantics.
@@ -25,6 +25,19 @@ the flexibility to support any custom semantics.
     use strings that (by convention, any convention could be use)
     include the fully qualified package name, mimicing require/import
     paths.
+
+It comes with two bin utils for eaily running programs built with this
+library:
+
+  - `ineedthis-run file1.js file2.js`: the listed files should be
+    modules each with an `ineedthis` service as its default
+    export. This command will then automatically start all the
+    services and their dependencies, and handles graceful shutdown on
+    Ctrl-c (SIGINT).
+  - `ineedthis-debug file1.js file2.js` behaves the same as
+    `ineedthis-run`, but automatically watches all loaded sources
+    files and will hot reload the changed code + gracefully restart
+    the affected services ().
 
 **Status: Alpha; Working with test suite; Used in prod!**
 
@@ -128,6 +141,41 @@ start(App, {
   'package/Configuration': A({key: 'ABC'}),
   'package/ConnectionService': FakeB,
 }).catch(err => { /* */ });
+```
+
+### Example project
+
+https://github.com/tf2stadium/qgs is a WIP project; but it
+demonstrates a frontend+backend website implemented with this
+library. Most stateful aspects of both the frontend and backend are
+split into individual ineedthis services and then composed to produce
+the final system.
+
+For example, the frontend [uses a
+helper](https://github.com/TF2Stadium/qgs/blob/728d30671ea0b8b04f17a10185c46715e04cdb66/frontend/src/services/withServices.js)
+to delay the initial React render and inject the launched services as
+props.
+
+The backend has [many stateful
+components](https://github.com/TF2Stadium/qgs/tree/728d30671ea0b8b04f17a10185c46715e04cdb66/backend/src/systems)
+such as a database connection, a
+[postgraphql](https://github.com/graphile/postgraphile) server, and a
+job queue.
+
+In development, this runs all the services with hot reloading and
+shared DB connections, etc:
+
+```
+ineedthis-debug -r localenv -r babel-polyfill ./dist/systems/server ./dist/systems/jobqueue ./dist/systems/monitor
+```
+
+In production, we can easily split the services into separate deployments:
+```
+# Run just the web server:
+ineedthis-run -r localenv -r babel-polyfill ./dist/systems/server
+
+# Run just the backend monitoring processes:
+ineedthis-run -r localenv -r babel-polyfill ./dist/systems/jobqueue ./dist/systems/monitor
 ```
 
 ## Runners
