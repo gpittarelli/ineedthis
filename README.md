@@ -33,11 +33,11 @@ library:
     modules each with an `ineedthis` service as its default
     export. This command will then automatically start all the
     services and their dependencies, and handles graceful shutdown on
-    Ctrl-c (SIGINT).
+    Ctrl-C (SIGINT).
   - `ineedthis-debug file1.js file2.js` behaves the same as
     `ineedthis-run`, but automatically watches all loaded sources
     files and will hot reload the changed code + gracefully restart
-    the affected services ().
+    the affected services.
 
 **Status: Alpha; Working with test suite; Used in prod!**
 
