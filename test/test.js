@@ -264,13 +264,50 @@ module.exports.prop1 = ineedthis.createService('A', {start: () => () => 0});
     });
   });
 
-  it('fails on the first error', () => {
+  it('fails on the first async error', () => {
     var A = createService('A', {dependencies: [], start: () => () => (
-      new Promise((resolve, reject) => reject(new Error('test')))
+      Promise.reject(new Error('test'))
     )}),
       B = createService('B', {dependencies: ['A'], start: () => () => 1});
 
     return expect(start(B)).to.eventually.be.rejectedWith(Error, 'test');
+  });
+
+  it('fails on the first sync error', () => {
+    var A = createService('A', {dependencies: [], start: () => () => {
+      throw new Error('test');
+    }}),
+      B = createService('B', {dependencies: ['A'], start: () => () => 1});
+
+    return expect(start(B)).to.eventually.be.rejectedWith(Error, 'test');
+  });
+
+  it('can start multiple instances of a service', () => {
+    var A = createService('A', {dependencies: [], start: () => () => 'abc'});
+
+    return Promise.all([start(A), start(A)]).then(services => {
+      expect(services).to.deep.equal([
+        {'A': 'abc'},
+        {'A': 'abc'}
+      ]);
+    });
+  });
+
+  it('handles singleton services gracefully', () => {
+    let singletonTaken = false;
+    var A = createService('A', {dependencies: [], start: () => () => {
+      if (singletonTaken) {
+        throw new Error('test');
+      } else {
+        singletonTaken = true;
+        return 'abc';
+      }
+    }});
+
+    return start(A).then(service => {
+      expect(service).to.deep.equal({'A': 'abc'});
+      return expect(start(A)).to.eventually.be.rejectedWith(Error, 'test');
+    });
   });
 
   it('fails on immediate code errors in the final service', () => {
