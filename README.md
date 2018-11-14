@@ -187,17 +187,19 @@ two scripts you can use to do this automatically for you:
   - `ineedthis-run` starts services that are the default exports of
     all files listed on the command lines.
   - `ineedthis-debug` is the same as `-run`, except it also
-    automatically handles tracking all the files used in the started
-    systems and watching for changes to them. When a change is
-    detected, all affected services are restarted with the files being
-    hot-reloaded. This can be much faster than having to fully restart
-    the `node` process, as the `requrie` cache is still hot and
-    unaffected services which may take a long time to start stay
-    running. A complex webserver with DB and other connections can
-    typically hot reload route file changes in this way in a fraction
-    of a second.
-
-Note: these are currently especially alpha/hacky
+    automatically watches for changes in any files used by the started
+    systems. When a change is detected, those files are hot-reloaded and
+    the affected services are restarted to pickup the new code. This
+    skips having to restart db connections, etc. and thus can be much
+    faster than a full restart. For example, even large monolithic
+    webservers with DB and other stateful connections can typically hot
+    reload route file changes in a fraction of a second.
+    - When using a compiler like babel or TypeScript; I highly recommend
+      having an incremental compiler running in the background and running
+      the built files directly instead of using `babel-register`,
+      `babel-node`, or their TS equivalents. This is generally more stable
+      because syntax errors pop up in the compiler process instead of
+      inside the running `ineedthis-debug` process.
 
 ## API
 
