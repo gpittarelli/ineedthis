@@ -62,6 +62,6 @@
     "callsite": "1.0.0",
     "chokidar": "1.7.0",
     "require-reload": "0.2.2",
-    "@ineedthis/resolve": "1.6.0"
+    "resolve": "1.12.0"
   }
 }
