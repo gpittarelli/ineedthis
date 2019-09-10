@@ -10,7 +10,7 @@
     "test": "npm run build && npm run test:nobuild",
     "test:nobuild": "mocha -r source-map-support/register $MOCHA_OPTS",
     "test:watch": "nodemon --watch lib --watch test -x 'npm -s run test:nobuild'",
-    "lint": "tslint 'src/**/*.ts'",
+    "lint": "eslint 'src/**/*.ts'",
     "lint:watch": "nodemon --watch src -x 'npm -s run lint'",
     "dev": "concurrently --prefix '[{name}]' --names 'TS,Mocha,Lint' 'npm run build:watch' 'npm run test:watch' 'npm run lint:watch'",
     "clean": "rimraf lib lib.es6",
@@ -48,14 +48,16 @@
   "homepage": "https://github.com/gpittarelli/ineedthis#readme",
   "devDependencies": {
     "@types/node": "7.0.5",
+    "@typescript-eslint/eslint-plugin": "^2.2.0",
+    "@typescript-eslint/parser": "^2.2.0",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "concurrently": "3.1.0",
+    "eslint": "^6.3.0",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
     "rimraf": "2.5.4",
     "source-map-support": "0.4.11",
-    "tslint": "4.5.1",
     "typescript": "3.6.2"
   },
   "dependencies": {

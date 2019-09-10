@@ -1,27 +1,27 @@
-// tslint:disable-next-line:no-var-requires
-const {name: pkgName, version}: {name: string, version: string} = require('../package');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const {name: pkgName, version}: {name: string; version: string} = require('../package');
 
 export type StartFnT<T> = ((...args: any[]) => (partialSystem: System) => Promise<T>);
 
 export type ServiceName = string;
-export type AliasedServiceName = {type: string, as: string};
+export type AliasedServiceName = {type: string; as: string};
 export type Service<T, StartFn extends StartFnT<T>> = {
-  (...args: any[]): (partialSystem: System) => Promise<T>,
+  (...args: any[]): (partialSystem: System) => Promise<T>;
   // Don't conflict with Function.prototype.name
-  dependencies: ServiceName[],
-  serviceName: ServiceName,
+  dependencies: ServiceName[];
+  serviceName: ServiceName;
   start: StartFn;
   stop: ((instance: T) => void);
-  [extraProps: string]: any
+  [extraProps: string]: any;
 };
 export type ServiceInstance<T, StartFn extends StartFnT<T>> = {
-  (...args: any[]): (partialSystem: System) => Promise<T>,
+  (...args: any[]): (partialSystem: System) => Promise<T>;
   // Don't conflict with Function.prototype.name
-  dependencies: ServiceName[],
-  serviceName: ServiceName,
+  dependencies: ServiceName[];
+  serviceName: ServiceName;
   start: (partialSystem: System) => Promise<T>;
   stop: ((instance: T) => void);
-  [extraProps: string]: any
+  [extraProps: string]: any;
 };
 
 export type System = {[key in ServiceName]: any};
@@ -31,9 +31,9 @@ export interface ServiceDescription<T, StartFn extends StartFnT<T>> {
   dependencies?: (ServiceName | AliasedServiceName | Service<any, any>)[];
   start: StartFn;
   stop?: ((instance: T) => void);
-};
+}
 
-export type PackageSpec = {path?: string[], package: string, __isPackageSpec: true};
+export type PackageSpec = {path?: string[]; package: string; __isPackageSpec: true};
 type FriendlyPackageSpec = string | PackageSpec | ServiceName | Service<any, any>;
 
 type ServiceRegistry = {[service in ServiceName]: Service<any, any>};
@@ -59,23 +59,62 @@ function isService(o: any): boolean {
   return isFunction(o) && isFunction(o.start) && isFunction(o.stop) && isArray(o.dependencies);
 }
 
+function getPath(o: any, ks: (string | number)[] = []): any {
+  if (ks.length === 0) {
+    return o;
+  } else {
+    return getPath(o[ks[0]], ks.slice(1));
+  }
+}
+
+function parsePackage(s: string): PackageSpec {
+  const parts = s.split('.');
+  return {path: parts.slice(1), package: parts[0], __isPackageSpec: true};
+}
+
+const notFound = Symbol('Package not found');
+function tryRequire(p: string | PackageSpec): Service<any, any> | symbol {
+  if (typeof p === 'string') {
+    p = parsePackage(p);
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const service = getPath(require(p.package), (p.path || []));
+    return service;
+  } catch (e) {
+    return notFound;
+  }
+}
+
+function requireOrThrow(p: string | PackageSpec): Service<any, any> {
+  const required = tryRequire(p);
+  if (required === notFound) {
+    throw new Error(`Couldn't resolve dependency: "${p}"`);
+  } else if (!isService(required)) {
+    throw new Error(`Resolved "${p}" but expected a Service, not "${String(required)}"`);
+  } else {
+    return (required as Service<any, any>);
+  }
+}
+
 function dependencyOrService(input: FriendlyPackageSpec): string | keyof PackageSpec {
   if (typeof input === 'string') {
     return input;
-  } else if (input.hasOwnProperty('__isPackageSpec')) {
+  } else if (Object.prototype.hasOwnProperty.call(input, '__isPackageSpec')) {
     return requireOrThrow((input as PackageSpec)).serviceName;
   }
   return (input as Service<any, any>).serviceName;
 }
 
-export function dangerouslyResetRegistry() {
+export function dangerouslyResetRegistry(): void {
   for (const serviceName of Object.keys(registry)) {
     delete registry[serviceName];
   }
 }
 
 function cloneFn<T>(fn: ((...args: any[]) => T)): ((...args: any[]) => T) {
-  return (...args: any[]) => fn(...args);
+  return (...args: any[]): T => fn(...args);
 }
 
 /**
@@ -94,7 +133,7 @@ export function createService<T, StartFn extends StartFnT<T>>(
   }
 
   if (!defaultedDescription.stop) {
-    defaultedDescription.stop = () => undefined;
+    defaultedDescription.stop = (): void => undefined;
   }
 
   const start: StartFn = (cloneFn(defaultedDescription.start) as any),
@@ -115,14 +154,6 @@ function flatten<T>(ll: Iterable<T>[]): T[] {
   return ([] as T[]).concat(...ll.map(it => Array.from(it)));
 }
 
-function getPath(o: any, ks: (string | number)[] = []): any {
-  if (ks.length === 0) {
-    return o;
-  } else {
-    return getPath(o[ks[0]], ks.slice(1));
-  }
-}
-
 /**
  * Creates a service that, when used, is loaded from the given node
  * packageName (eg @scope/some-cool-package/path/inside/package) and a
@@ -130,36 +161,6 @@ function getPath(o: any, ks: (string | number)[] = []): any {
  */
 export function fromPackage(packageName: string, path?: string[]): PackageSpec {
   return {path, package: packageName, __isPackageSpec: true};
-}
-
-function parsePackage(s: string): PackageSpec {
-  const parts = s.split('.');
-  return {path: parts.slice(1), package: parts[0], __isPackageSpec: true};
-}
-
-const notFound = Symbol('Package not found');
-function tryRequire(p: string | PackageSpec): Service<any, any> | Symbol {
-  if (typeof p === 'string') {
-    p = parsePackage(p);
-  }
-
-  try {
-    const service = getPath(require(p.package), (p.path || []));
-    return service;
-  } catch (e) {
-    return notFound;
-  }
-}
-
-function requireOrThrow(p: string | PackageSpec): Service<any, any> {
-  const required = tryRequire(p);
-  if (required === notFound) {
-    throw new Error(`Couldn't resolve dependency: "${p}"`);
-  } else if (!isService(required)) {
-    throw new Error(`Resolved "${p}" but expected a Service, not "${required}"`);
-  } else {
-    return (required as Service<any, any>);
-  }
 }
 
 // TODO: Can get rid of 'any' once Variadic Kinds lands (TS issue #5453)
@@ -192,7 +193,7 @@ export async function start(
       } else {
         throw new Error(`Couldn't find: "${nameOrService}"`);
       }
-    } else if (nameOrService.hasOwnProperty('__isPackageSpec')) {
+    } else if (Object.prototype.hasOwnProperty.call(nameOrService, '__isPackageSpec')) {
       return requireOrThrow(nameOrService as PackageSpec);
     } else {
       return (nameOrService as Service<any, any>);
@@ -223,10 +224,15 @@ export async function start(
 
   const outstandingLoads: {[name in ServiceName]: Promise<Service<any, any>>} = {};
   async function load(name: ServiceName): Promise<Service<any, any>> {
-    const service = await resolve(name)()(system);
+    const service = await resolve(name)()({...system});
 
     delete outstandingLoads[name];
     Object.values(outstandingDeps).forEach(deps => deps.delete(name));
+
+    // We duplicate the `system` object, so services can't mutate our
+    // master copy of the system. Thus, the possible race condition
+    // that eslint detects here is a false positive.
+    // eslint-disable-next-line require-atomic-updates
     system[name] = service;
 
     return service;
@@ -281,7 +287,7 @@ export async function stop(
           !outstandingShutdowns[s] &&
           !finishedShutdowns[s]) {
 
-        outstandingShutdowns[s] = (async () => {
+        outstandingShutdowns[s] = (async (): Promise<void> => {
           const service = registry[s];
           await service.stop(system[s]);
           finishedShutdowns[s] = true;
@@ -355,7 +361,7 @@ export async function stopPartial(
 const noopService: ((x: any) => ServiceDescription<any, any>) = x =>
   createService(
     undefined, {
-      start: () => async () => x,
+      start: () => async (): Promise<any> => x,
     },
   );
 
@@ -382,7 +388,7 @@ export async function startPartial(
 
   const finalSystem: System = {};
   for (const s of Object.keys(newServices)) {
-    if (mocks.hasOwnProperty(s)) {
+    if (Object.prototype.hasOwnProperty.call(mocks, s)) {
       finalSystem[s] = system[s];
     } else {
       finalSystem[s] = newServices[s];
