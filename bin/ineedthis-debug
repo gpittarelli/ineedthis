@@ -25,7 +25,26 @@ var requireGraph = Object.create(null);
 // watchers
 const watchedPaths = Object.create(null);
 
+const wrapCreateService = (realCreateService) => {
+  return function () {
+    const path = stack()[1].getFileName();
+
+    const x = realCreateService.apply(null, arguments);
+
+    if (!serviceDefs[path]) {
+      serviceDefs[path] = [];
+    }
+    const name = x.serviceName;
+    if (!serviceDefs[path].includes(name)) {
+      serviceDefs[path].push(name);
+    }
+
+    return x;
+  };
+};
+
 // Override createService() to track what files services are defined in
+// TODO: use wrapCreateService here
 const realCreateService = ineedthis.createService;
 ineedthis.createService = function(name, service) {
   const path = stack()[1].getFileName();
@@ -74,7 +93,20 @@ modulePrototype.require = function (moduleName) {
     dependsOn.push(this.filename);
   }
 
-  return originalRequire.call(this, moduleName);
+  const val = originalRequire.call(this, moduleName);
+
+  // Use a special flag to detect service-specific variants of
+  // createService and set them up properly for hot-reloading (We need
+  // to reload when the callers of these "createService variants" are
+  // changed, not just the direct createService callers are changed)
+  //
+  // TODO: This special property can be a constant exported by
+  // ineedthis instead of a magic string name like this.
+  if (typeof val === 'function' && val.__ineedthis__isCreateService) {
+    return wrapCreateService(val);
+  }
+
+  return val;
 };
 
 var watcher = chokidar.watch(
