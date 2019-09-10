@@ -325,9 +325,9 @@ export async function stopPartial(
 
   // Follow all dependent relationships from the target "partial"
   // subgraph to be shutdown
-  const toShutdown = new Set(),
+  const toShutdown = new Set<string>(),
     toVisit = partial.slice(),
-    visited = new Set();
+    visited = new Set<string>();
   let visiting;
   while (visiting = toVisit.pop()) {
     visited.add(visiting);

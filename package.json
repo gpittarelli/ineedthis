@@ -56,7 +56,7 @@
     "rimraf": "2.5.4",
     "source-map-support": "0.4.11",
     "tslint": "4.5.1",
-    "typescript": "2.6.1"
+    "typescript": "3.6.2"
   },
   "dependencies": {
     "callsite": "1.0.0",
