@@ -39,11 +39,19 @@ library:
     files and will hot reload the changed code + gracefully restart
     the affected services.
 
+Finally, ineedthis promotes code reuse and makes it easier to
+encapsulate best practices for common libraries:
+
+  - [`@ineedthis/express`](https://github.com/gpittarelli/ineedthis-express)
+    makes it easy to start an express server with graceful startup,
+    shutdown, and hot reloading.
+
 **Status: Alpha; Working with test suite; Used in prod!**
 
 TODO:
-  - decide which of the many "extra" features of component/mount we
+  - Decide which of the many "extra" features of component/mount we
     want
+  - Write more wrappers around common node libraries
 
 ## Example
 
