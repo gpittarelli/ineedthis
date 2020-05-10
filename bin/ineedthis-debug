@@ -102,6 +102,9 @@ modulePrototype.require = function (moduleName) {
   //
   // TODO: This special property can be a constant exported by
   // ineedthis instead of a magic string name like this.
+  if (val && typeof val.default === 'function' && val.default.__ineedthis__isCreateService) {
+    val.default = wrapCreateService(val.default);
+  }
   if (typeof val === 'function' && val.__ineedthis__isCreateService) {
     return wrapCreateService(val);
   }
